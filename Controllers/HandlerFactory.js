@@ -1,6 +1,5 @@
 const catchAsync = require("./../utils/CatchAsync");
 const APIFeatures = require("./../utils/ApiFeatures");
-const cloudinary = require("../utils/cloudinary");
 exports.deleteOne = (Model) =>
   catchAsync(async (req, res, next) => {
     const doc = await Model.findByIdAndDelete(req.params.id);

@@ -1,55 +1,55 @@
 const multer = require("multer");
+const sharp = require("sharp");
+
 const Product = require("../Models/Product");
 const APIFeatures = require("../utils/ApiFeatures");
 const catchAsync = require("../utils/CatchAsync");
-const path = require("path");
-const cloudinary = require("../utils/cloudinary");
 
 const factory = require("./HandlerFactory");
 const Category = require("../Models/Category");
 const Subcategory = require("../Models/SubCategory");
 
-// const multerStorage = multer.diskStorage({
-//   filename: (req, file, cb) => {
-//     cb(
-//       null,
-//       file.fieldname + "-" + Date.now() + path.extname(file.originalname)
-//     );
-//   },
-//   destination: (req, file, cb) => {
-//     cb(null, "public/uploads");
-//   },
-// });
 const multerStorage = multer.memoryStorage();
+
+const multerFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith("image")) {
+    cb(null, true);
+  } else {
+    cb(new AppError("Not an image! Please upload only images.", 400), false);
+  }
+};
 
 const upload = multer({
   storage: multerStorage,
+  fileFilter: multerFilter,
 });
-exports.uploadProductImage = (req, res, next) => {
-  upload.single("image")(req, res, (err) => {
-    if (err) {
-      console.error("Image upload error:", err);
-      return res.status(400).json({
-        status: "error",
-        message: "Image upload failed",
-      });
-    }
-    next();
-  });
-};
+
+exports.uploadProductPhoto = upload.single("image");
+
+exports.resizeProductPhoto = catchAsync(async (req, res, next) => {
+  if (!req.file) return next();
+  const fileName = `product-${req.body.name}${Date.now()}.jpeg`;
+  req.body.image = fileName;
+
+  await sharp(req.file.buffer)
+    .resize(500, 500)
+    .toFormat("jpeg")
+    .jpeg({ quality: 90 })
+    .toFile(`public/uploads/products/${fileName}`);
+  next();
+});
 
 exports.createProduct = catchAsync(async (req, res) => {
-  const cloudinaryRes = await cloudinary.handleUpload(req.file.buffer);
+  console.log(req.body);
   const productData = {
     name: req.body.name,
     description: req.body.description,
     category: req.body.category,
     subCategory: req.body.subCategory || null,
     tags: req.body.tags,
-    productImage: cloudinaryRes.url,
+    productImage: req.body.image,
   };
   const newDoc = await Product.create(productData);
-  console.log(newDoc);
   setTimeout(() => {
     res.status(201).json({
       status: "success",

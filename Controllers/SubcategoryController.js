@@ -17,6 +17,7 @@ exports.getSubCategoryProducts = catchAsync(async (req, res) => {
 
 exports.createSubCategory = catchAsync(async (req, res) => {
   const newSubCategory = new Subcategory(req.body);
+  console.log(newSubCategory);
   const newDoc = await newSubCategory.save();
 
   res.status(200).json({
